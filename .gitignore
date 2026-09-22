@@ -54,6 +54,7 @@ Desktop.ini
 *.pt
 *.ckpt
 *.bin
+*.safetensors
 
 # Logs
 *.log

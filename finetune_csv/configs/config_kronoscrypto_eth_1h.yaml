@@ -1,0 +1,65 @@
+# Finetune Kronos-base on KronosCrypto's ETH/USDT:USDT 1h series (3 years,
+# exported by ../../../KronosCrypto/scripts/export_finetune_csv.py).
+# Smoke-test scale (2 epochs each) to validate the pipeline + measure timing on
+# this machine's MPS backend before committing to a longer run.
+
+data:
+  data_path: "/Users/ludaoru/Arkreen/Kronos/finetune_csv/data/eth_1h.csv"
+  lookback_window: 400
+  predict_window: 30
+  max_context: 512
+  clip: 5.0
+  train_ratio: 0.9
+  val_ratio: 0.1
+  test_ratio: 0.0
+
+training:
+  tokenizer_epochs: 2
+  basemodel_epochs: 2
+  # Kronos-base (102M params) at batch_size=32 over a 431-step sequence pushed
+  # RSS to ~22GB and thrashed system swap on this 32GB machine (tokenizer's 4M
+  # params was fine at 32). batch_size=4 was stable but only used ~255MB RSS —
+  # way too conservative, and 8x more steps/epoch cost far more wall-time than
+  # it saved. Trying 16 as a middle ground. accumulation_steps doesn't help
+  # here since finetune_base_model.py doesn't implement it (only
+  # finetune_tokenizer.py does).
+  batch_size: 16
+  log_interval: 50
+  num_workers: 0
+  seed: 42
+
+  tokenizer_learning_rate: 0.0002
+  predictor_learning_rate: 0.000001
+
+  adam_beta1: 0.9
+  adam_beta2: 0.95
+  adam_weight_decay: 0.1
+
+  accumulation_steps: 1
+
+model_paths:
+  pretrained_tokenizer: "NeoQuasar/Kronos-Tokenizer-base"
+  pretrained_predictor: "NeoQuasar/Kronos-base"
+
+  exp_name: "kronoscrypto_eth_1h"
+  base_path: "/Users/ludaoru/Arkreen/Kronos/finetune_csv/finetuned/"
+
+  base_save_path: ""
+  finetuned_tokenizer: ""
+
+  tokenizer_save_name: "tokenizer"
+  basemodel_save_name: "basemodel"
+
+experiment:
+  name: "kronoscrypto_eth_1h_smoketest"
+  description: "Smoke test: finetune Kronos-base on 3y ETH 1h data"
+  use_comet: false
+
+  train_tokenizer: true
+  train_basemodel: true
+
+  skip_existing: false
+
+device:
+  use_cuda: true
+  device_id: 0

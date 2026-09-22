@@ -372,7 +372,12 @@ def main():
                        help='Configuration file path (default: config.yaml)')
     args = parser.parse_args()
     
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
     print(f"Using device: {device}")
     
     config = CustomFinetuneConfig(args.config)
@@ -391,7 +396,7 @@ def main():
     if getattr(config, 'pre_trained_tokenizer', True):
         tokenizer = KronosTokenizer.from_pretrained(config.finetuned_tokenizer_path)
     else:
-        import json, os
+        import json
         print("pre_trained_tokenizer=False, randomly initializing Tokenizer architecture for training")
         cfg_path_tok = os.path.join(config.pretrained_tokenizer_path if hasattr(config, 'pretrained_tokenizer_path') else config.finetuned_tokenizer_path, 'config.json')
         with open(cfg_path_tok, 'r') as f:
@@ -418,7 +423,7 @@ def main():
     if getattr(config, 'pre_trained_predictor', True):
         model = Kronos.from_pretrained(config.pretrained_predictor_path)
     else:
-        import json, os
+        import json
         print("pre_trained_predictor=False, randomly initializing Predictor architecture for training")
         cfg_path = os.path.join(config.pretrained_predictor_path, 'config.json')
         with open(cfg_path, 'r') as f:
